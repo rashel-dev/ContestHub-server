@@ -58,8 +58,11 @@ async function run() {
         app.get("/contests/popular", async (req, res) => {
             const now = new Date();
             const result = await contestCollection
-                .find({ deadline: { $gt: now } })
-                .sort({ participants: -1 })
+                .find({ deadline: { $gt: now }, approvalStatus: "approved" })
+                .sort({
+                    participants: -1,
+                    createdAt: -1,
+                })
                 .limit(8)
                 .toArray();
             res.send(result);
