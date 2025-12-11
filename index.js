@@ -34,16 +34,19 @@ async function run() {
         //create a collection
         const contestCollection = database.collection("contests");
 
-// ----------------- contest related api---------------------------        
+        // ----------------- contest related api---------------------------
 
         //get all contests api
         app.get("/contests", async (req, res) => {
             const query = {};
+            const { email } = req.query;
+            if(email){
+                query.creatorEmail = email; 
+            }
             const cursor = contestCollection.find(query);
             const result = await cursor.toArray();
             res.send(result);
-        })
-
+        });
 
         //create a contest api
         app.post("/contests", async (req, res) => {
