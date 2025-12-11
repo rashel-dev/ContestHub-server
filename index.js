@@ -43,7 +43,13 @@ async function run() {
             if(email){
                 query.creatorEmail = email; 
             }
-            const cursor = contestCollection.find(query);
+
+            const options = {
+                // sort by createdAt in descending order
+                sort: { createdAt: -1 },
+            };
+
+            const cursor = contestCollection.find(query, options);
             const result = await cursor.toArray();
             res.send(result);
         });
@@ -51,10 +57,29 @@ async function run() {
         //create a contest api
         app.post("/contests", async (req, res) => {
             const contest = req.body;
-            console.log(contest);
+            contest.createdAt = new Date();
+            // console.log(contest);
+
             const result = await contestCollection.insertOne(contest);
             res.send(result);
         });
+
+
+        // Delete a contest api
+        app.delete("/contests/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await contestCollection.deleteOne(query);
+            res.send(result);
+        });
+
+
+
+
+
+
+
+
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
