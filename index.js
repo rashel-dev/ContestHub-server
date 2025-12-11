@@ -5,7 +5,7 @@ require("dotenv").config();
 const port = process.env.PORT || 3000;
 
 // MongoDB
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // Middlewares
 app.use(cors());
@@ -40,8 +40,8 @@ async function run() {
         app.get("/contests", async (req, res) => {
             const query = {};
             const { email } = req.query;
-            if(email){
-                query.creatorEmail = email; 
+            if (email) {
+                query.creatorEmail = email;
             }
 
             const options = {
@@ -54,16 +54,30 @@ async function run() {
             res.send(result);
         });
 
+        //get 8 popular contest api
+        app.get("/contests/popular", async (req, res) => {
+            const now = new Date();
+            const result = await contestCollection
+                .find({ deadline: { $gt: now } })
+                .sort({ participants: -1 })
+                .limit(8)
+                .toArray();
+            res.send(result);
+        });
+
         //create a contest api
         app.post("/contests", async (req, res) => {
             const contest = req.body;
             contest.createdAt = new Date();
-            // console.log(contest);
+
+            // Convert deadline string to Date
+            if (contest.deadline) {
+                contest.deadline = new Date(contest.deadline);
+            }
 
             const result = await contestCollection.insertOne(contest);
             res.send(result);
         });
-
 
         // Delete a contest api
         app.delete("/contests/:id", async (req, res) => {
@@ -72,14 +86,6 @@ async function run() {
             const result = await contestCollection.deleteOne(query);
             res.send(result);
         });
-
-
-
-
-
-
-
-
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
