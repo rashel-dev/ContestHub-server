@@ -68,6 +68,14 @@ async function run() {
             res.send(result);
         });
 
+        //get a single contest api
+        app.get("/contests/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await contestCollection.findOne(query);
+            res.send(result);
+        });
+
         //create a contest api
         app.post("/contests", async (req, res) => {
             const contest = req.body;
