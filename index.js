@@ -16,19 +16,34 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clu
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
-    }
-  });
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    },
+});
 
 app.get("/", (req, res) => {
     res.send("Contest Hub Server is running");
 });
 
-
 async function run() {
     try {
+        //connnect to the database
+        const database = client.db(process.env.DB_NAME);
+
+        //create a collection
+        const contestCollection = database.collection("contests");
+
+// ----------------- contest related api---------------------------        
+
+        //create a contest api
+        app.post("/contests", async (req, res) => {
+            const contest = req.body;
+            console.log(contest);
+            const result = await contestCollection.insertOne(contest);
+            res.send(result);
+        });
+
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
         // Send a ping to confirm a successful connection
@@ -40,7 +55,6 @@ async function run() {
     }
 }
 run().catch(console.dir);
-
 
 app.listen(port, () => {
     console.log(`Contest Hub Server is running on port ${port}`);
