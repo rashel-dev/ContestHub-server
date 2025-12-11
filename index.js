@@ -36,6 +36,15 @@ async function run() {
 
 // ----------------- contest related api---------------------------        
 
+        //get all contests api
+        app.get("/contests", async (req, res) => {
+            const query = {};
+            const cursor = contestCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+
         //create a contest api
         app.post("/contests", async (req, res) => {
             const contest = req.body;
