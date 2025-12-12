@@ -1,8 +1,10 @@
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const express = require("express");
 const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 3000;
+
 
 // MongoDB
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -32,7 +34,21 @@ async function run() {
         const database = client.db(process.env.DB_NAME);
 
         //create a collection
+        const userCollection = database.collection("users");
         const contestCollection = database.collection("contests");
+
+// -------------------- User related api---------------------------
+
+        //create a user api
+        app.post("/users", async (req, res) => {
+            const user = req.body;
+            const result = await userCollection.insertOne(user);
+            res.send(result);
+        });
+
+
+
+
 
         // ----------------- contest related api---------------------------
 
@@ -97,6 +113,30 @@ async function run() {
             const result = await contestCollection.deleteOne(query);
             res.send(result);
         });
+
+
+// -----------------payment related api---------------------------
+
+        // app.post('/create-checkout-session', async (req, res) => {
+
+        //     const paymentInfo = req.body;
+
+        //     const session = await stripe.checkout.sessions.create({
+        //         line_items: [
+        //             {
+        //                 // Provide the exact Price ID (for example, price_1234) of the product you want to sell
+        //                 price: "{{PRICE_ID}}",
+        //                 participantEmail: paymentInfo.userEmail,
+        //                 quantity: 1,
+        //             },
+        //         ],
+        //         mode: "payment",
+        //         success_url: `${process.env.SITE_DOMAIN}/payment-success`,
+        //         cancel_url: `${process.env.SITE_DOMAIN}/payment-failed`,
+
+        //     });
+        // });
+
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
