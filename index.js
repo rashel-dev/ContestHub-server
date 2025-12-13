@@ -1,9 +1,10 @@
-// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const express = require("express");
 const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 3000;
+
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // MongoDB
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -170,25 +171,37 @@ async function run() {
 
         // -----------------payment related api---------------------------
 
-        // app.post('/create-checkout-session', async (req, res) => {
 
-        //     const paymentInfo = req.body;
+        //create payment api
 
-        //     const session = await stripe.checkout.sessions.create({
-        //         line_items: [
-        //             {
-        //                 // Provide the exact Price ID (for example, price_1234) of the product you want to sell
-        //                 price: "{{PRICE_ID}}",
-        //                 participantEmail: paymentInfo.userEmail,
-        //                 quantity: 1,
-        //             },
-        //         ],
-        //         mode: "payment",
-        //         success_url: `${process.env.SITE_DOMAIN}/payment-success`,
-        //         cancel_url: `${process.env.SITE_DOMAIN}/payment-failed`,
+        app.post('/create-checkout-session', async (req, res) => {
 
-        //     });
-        // });
+            const paymentInfo = req.body;
+            const session = await stripe.checkout.sessions.create({
+                line_items: [
+                    {
+                        price_data: {
+                            currency: 'USD',
+                            unit_amount: parseInt(paymentInfo.entryPrice * 100), // amount in cents
+                            product_data: {
+                                name: paymentInfo.contestName,
+                            },
+
+                        },
+                        quantity: 1,
+                    },
+                ],
+                customer_email: paymentInfo.userEmail,
+                mode: "payment",
+                metadata: {
+                    contestId: paymentInfo.contestId,      
+                },
+                success_url: `${process.env.SITE_DOMAIN}/payment-success`,
+                cancel_url: `${process.env.SITE_DOMAIN}/payment-cancel`,
+            });
+            console.log(session);
+            res.send({ url: session.url });
+        });
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
