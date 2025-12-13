@@ -171,6 +171,18 @@ async function run() {
             res.send(result);
         });
 
+        //================================contest entry collection related api=========================================
+
+        // My participated contests 
+        app.get("/my-participated-contests", async (req, res) => {
+            const { email } = req.query;
+
+            // Get all paid contests by user
+            const payments = await paymentCollection.find({ userEmail: email, status: "paid" }).sort({ createdAt: -1 }).toArray();
+
+            res.send(payments);
+        });
+
         // -----------------payment related api---------------------------
 
         //create payment api
@@ -194,6 +206,7 @@ async function run() {
                 mode: "payment",
                 metadata: {
                     contestId: paymentInfo.contestId,
+                    contestName: paymentInfo.contestName,
                 },
                 success_url: `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.SITE_DOMAIN}/payment-cancel/${paymentInfo.contestId}`,
@@ -201,24 +214,93 @@ async function run() {
             res.send({ url: session.url });
         });
 
-        //payment success api => what to do after payment success
         app.patch("/payment-success", async (req, res) => {
             const { session_id } = req.query;
 
-            const session = await stripe.checkout.sessions.retrieve(session_id);
+            try {
+                // Retrieve Stripe session
+                const session = await stripe.checkout.sessions.retrieve(session_id);
 
-            if (session.payment_status === "paid") {
+                if (session.payment_status !== "paid") {
+                    return res.status(400).send({ success: false, message: "Payment not completed" });
+                }
+
+                // Prevent duplicate processing
+                const existingPayment = await paymentCollection.findOne({ sessionId: session.id });
+                if (existingPayment) {
+                    return res.send({ success: true, message: "Payment already processed" });
+                }
+
                 const contestId = session.metadata.contestId;
-                const query = { _id: new ObjectId(contestId) };
-                const updatedDoc = {
-                    $inc: {
-                        participants: 1,
-                    },
-                };
-                const result = await contestCollection.updateOne(query, updatedDoc);
-                res.send(result);
+
+                // Increment participants count
+                await contestCollection.updateOne({ _id: new ObjectId(contestId) }, { $inc: { participants: 1 } });
+
+                // Save payment info
+                await paymentCollection.insertOne({
+                    sessionId: session.id,
+                    userEmail: session.customer_email,
+                    contestId: contestId,
+                    contestName: session.metadata.contestName,
+                    amount: session.amount_total / 100,
+                    currency: session.currency,
+                    status: session.payment_status,
+                    createdAt: new Date(),
+                    transactionId: session.payment_intent,
+                });
+
+                // Save participant info
+                await contestEntryCollection.insertOne({
+                    contestId: contestId,
+                    userEmail: session.customer_email,
+                    joinedAt: new Date(),
+                    sessionId: session.id,
+                    status: "confirmed",
+                });
+
+                res.send({ success: true, message: "Payment processed and participants count updated" });
+            } catch (err) {
+                console.error(err);
+                res.status(500).send({ success: false, message: "Server error" });
             }
         });
+
+        // //payment success api => what to do after payment success
+        // app.patch("/payment-success", async (req, res) => {
+        //     const { session_id } = req.query;
+
+        //     const session = await stripe.checkout.sessions.retrieve(session_id);
+
+        //     if (session.payment_status === "paid") {
+        //         const contestId = session.metadata.contestId;
+        //         const query = { _id: new ObjectId(contestId) };
+        //         const updatedDoc = {
+        //             $inc: {
+        //                 participants: 1,
+        //             },
+        //         };
+        //         const result = await contestCollection.updateOne(query, updatedDoc);
+
+        //         // Save payment info
+        //         const paymentInfo ={
+        //             sessionId: session.id,
+        //             userEmail: session.customer_email,
+        //             contestId: session.metadata.contestId,
+        //             contestName: session.metadata.contestName,
+        //             amount: session.amount_total / 100,
+        //             currency: session.currency,
+        //             status: session.payment_status,
+        //             createdAt: new Date(),
+        //             transactionId: session.payment_intent,
+        //         };
+
+        //         if(session.payment_status === "paid"){
+        //             await paymentCollection.insertOne(paymentInfo);
+        //         }
+
+        //         res.send({ success: true, message: "Payment processed and participants count updated", result });
+        //     }
+        // });
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
