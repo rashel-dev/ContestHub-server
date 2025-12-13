@@ -173,7 +173,7 @@ async function run() {
 
         //================================contest entry collection related api=========================================
 
-        // My participated contests 
+        // My participated contests
         app.get("/my-participated-contests", async (req, res) => {
             const { email } = req.query;
 
@@ -181,6 +181,21 @@ async function run() {
             const payments = await paymentCollection.find({ userEmail: email, status: "paid" }).sort({ createdAt: -1 }).toArray();
 
             res.send(payments);
+        });
+
+        // Check if a user already registered in a contest
+        app.get("/contest-registered", async (req, res) => {
+            const { contestId, email } = req.query;
+
+            const payment = await paymentCollection.findOne({
+                contestId,
+                userEmail: email,
+                status: "paid",
+            });
+
+            res.send({
+                registered: !!payment,
+            });
         });
 
         // -----------------payment related api---------------------------
