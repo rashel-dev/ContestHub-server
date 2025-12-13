@@ -137,6 +137,22 @@ async function run() {
             res.send(result);
         });
 
+
+        //update a contest api
+        app.patch("/contests/:id", async (req, res) => {
+            const id = req.params.id;
+            const { approvalStatus } = req.body;
+            const query = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    approvalStatus: approvalStatus,
+                },
+            };
+            const result = await contestCollection.updateOne(query, updatedDoc);
+            res.send(result);
+
+        })
+
         // Delete a contest api
         app.delete("/contests/:id", async (req, res) => {
             const id = req.params.id;
