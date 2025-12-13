@@ -45,7 +45,6 @@ async function run() {
             res.send(result);
         });
 
-
         //create a user api
         app.post("/users", async (req, res) => {
             const user = req.body;
@@ -56,15 +55,12 @@ async function run() {
             const email = user.email;
             const userExists = await userCollection.findOne({ email });
             if (userExists) {
-               return res.send({ message: "User already exists" });
-               
+                return res.send({ message: "User already exists" });
             }
-
 
             const result = await userCollection.insertOne(user);
             res.send(result);
         });
-
 
         //update user data api by email
         app.patch("/users", async (req, res) => {
@@ -78,8 +74,21 @@ async function run() {
             };
             const result = await userCollection.updateOne(filter, updateDoc);
             res.send(result);
+        });
 
-        })
+        // Update user role
+        app.patch("/users/:id/role", async (req, res) => {
+            const { id } = req.params;
+            const { role } = req.body;
+
+            if (!["user", "creator", "admin"].includes(role)) {
+                return res.status(400).send({ message: "Invalid role" });
+            }
+
+            const result = await userCollection.updateOne({ _id: new ObjectId(id) }, { $set: { role } });
+
+            res.send(result);
+        });
 
         // ----------------- contest related api---------------------------
 
@@ -137,7 +146,6 @@ async function run() {
             res.send(result);
         });
 
-
         //update a contest api
         app.patch("/contests/:id", async (req, res) => {
             const id = req.params.id;
@@ -150,8 +158,7 @@ async function run() {
             };
             const result = await contestCollection.updateOne(query, updatedDoc);
             res.send(result);
-
-        })
+        });
 
         // Delete a contest api
         app.delete("/contests/:id", async (req, res) => {
