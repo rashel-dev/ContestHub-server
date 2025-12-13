@@ -197,7 +197,7 @@ async function run() {
                     contestId: paymentInfo.contestId,      
                 },
                 success_url: `${process.env.SITE_DOMAIN}/payment-success`,
-                cancel_url: `${process.env.SITE_DOMAIN}/payment-cancel`,
+                cancel_url: `${process.env.SITE_DOMAIN}/payment-cancel/${paymentInfo.contestId}`,
             });
             console.log(session);
             res.send({ url: session.url });
