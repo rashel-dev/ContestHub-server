@@ -36,6 +36,8 @@ async function run() {
         //create a collection
         const userCollection = database.collection("users");
         const contestCollection = database.collection("contests");
+        const paymentCollection = database.collection("payments");
+        const contestEntryCollection = database.collection("contestEntries");
 
         // -------------------- User related api---------------------------
 
@@ -171,22 +173,19 @@ async function run() {
 
         // -----------------payment related api---------------------------
 
-
         //create payment api
 
-        app.post('/create-checkout-session', async (req, res) => {
-
+        app.post("/create-checkout-session", async (req, res) => {
             const paymentInfo = req.body;
             const session = await stripe.checkout.sessions.create({
                 line_items: [
                     {
                         price_data: {
-                            currency: 'USD',
+                            currency: "USD",
                             unit_amount: parseInt(paymentInfo.entryPrice * 100), // amount in cents
                             product_data: {
                                 name: paymentInfo.contestName,
                             },
-
                         },
                         quantity: 1,
                     },
@@ -194,13 +193,31 @@ async function run() {
                 customer_email: paymentInfo.userEmail,
                 mode: "payment",
                 metadata: {
-                    contestId: paymentInfo.contestId,      
+                    contestId: paymentInfo.contestId,
                 },
-                success_url: `${process.env.SITE_DOMAIN}/payment-success`,
+                success_url: `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.SITE_DOMAIN}/payment-cancel/${paymentInfo.contestId}`,
             });
-            console.log(session);
             res.send({ url: session.url });
+        });
+
+        //payment success api => what to do after payment success
+        app.patch("/payment-success", async (req, res) => {
+            const { session_id } = req.query;
+
+            const session = await stripe.checkout.sessions.retrieve(session_id);
+
+            if (session.payment_status === "paid") {
+                const contestId = session.metadata.contestId;
+                const query = { _id: new ObjectId(contestId) };
+                const updatedDoc = {
+                    $inc: {
+                        participants: 1,
+                    },
+                };
+                const result = await contestCollection.updateOne(query, updatedDoc);
+                res.send(result);
+            }
         });
 
         // Connect the client to the server	(optional starting in v4.7)
