@@ -38,6 +38,14 @@ async function run() {
 
         // -------------------- User related api---------------------------
 
+        //get all users api
+        app.get("/users", async (req, res) => {
+            const cursor = userCollection.find().sort({ createdAt: -1 });
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
+
         //create a user api
         app.post("/users", async (req, res) => {
             const user = req.body;
