@@ -5,7 +5,6 @@ const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 
-
 // MongoDB
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
@@ -37,18 +36,26 @@ async function run() {
         const userCollection = database.collection("users");
         const contestCollection = database.collection("contests");
 
-// -------------------- User related api---------------------------
+        // -------------------- User related api---------------------------
 
         //create a user api
         app.post("/users", async (req, res) => {
             const user = req.body;
+            user.role = "user"; // default role
+            user.createdAt = new Date();
+
+            //check if user already exists. if exists, do not insert again
+            const email = user.email;
+            const userExists = await userCollection.findOne({ email });
+            if (userExists) {
+               return res.send({ message: "User already exists" });
+               
+            }
+
+
             const result = await userCollection.insertOne(user);
             res.send(result);
         });
-
-
-
-
 
         // ----------------- contest related api---------------------------
 
@@ -114,8 +121,7 @@ async function run() {
             res.send(result);
         });
 
-
-// -----------------payment related api---------------------------
+        // -----------------payment related api---------------------------
 
         // app.post('/create-checkout-session', async (req, res) => {
 
@@ -136,7 +142,6 @@ async function run() {
 
         //     });
         // });
-
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
