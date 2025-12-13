@@ -57,6 +57,22 @@ async function run() {
             res.send(result);
         });
 
+
+        //update user data api by email
+        app.patch("/users", async (req, res) => {
+            const { email } = req.query;
+            const updatedData = req.body;
+            const filter = { email };
+            const updateDoc = {
+                $set: {
+                    ...updatedData,
+                },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+
+        })
+
         // ----------------- contest related api---------------------------
 
         //get all contests api
