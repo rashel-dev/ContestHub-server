@@ -48,6 +48,14 @@ async function run() {
             res.send(result);
         });
 
+        //get a user by his email
+        app.get("/users/:email", async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await userCollection.findOne(query);
+            res.send(result);
+        });
+
         //create a user api
         app.post("/users", async (req, res) => {
             const user = req.body;
@@ -152,13 +160,20 @@ async function run() {
         //update a contest api(admin)
         app.patch("/contests/:id", async (req, res) => {
             const id = req.params.id;
-            const { approvalStatus } = req.body;
+            const { approvalStatus , winner } = req.body;
             const query = { _id: new ObjectId(id) };
+
+            const updatedFields = {};
+
+            if (approvalStatus !== undefined) updatedFields.approvalStatus = approvalStatus;
+            if (winner) {
+                updatedFields.winner = winner;
+            }
+
             const updatedDoc = {
-                $set: {
-                    approvalStatus: approvalStatus,
-                },
+                $set: updatedFields,
             };
+
             const result = await contestCollection.updateOne(query, updatedDoc);
             res.send(result);
         });
