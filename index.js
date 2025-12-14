@@ -198,6 +198,27 @@ async function run() {
             });
         });
 
+
+        //submit task api 
+        app.patch("/submit-task", async (req, res) => {
+            const {contestId, email, task} = req.body;
+
+            const filter = {
+                contestId: new ObjectId(contestId),
+                userEmail: email,
+            };
+
+            const updateDoc = {
+                $set: {
+                    submittedTask:task,
+                    submittedAt: new Date(),
+                },
+            };
+
+            const result = await contestEntryCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
+
         // -----------------payment related api---------------------------
 
         //create payment api
