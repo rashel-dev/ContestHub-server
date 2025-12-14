@@ -307,6 +307,7 @@ async function run() {
                 metadata: {
                     contestId: paymentInfo.contestId,
                     contestName: paymentInfo.contestName,
+                    participantName: paymentInfo.userName,
                 },
                 success_url: `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.SITE_DOMAIN}/payment-cancel/${paymentInfo.contestId}`,
@@ -352,6 +353,7 @@ async function run() {
                 // Save participant info
                 await contestEntryCollection.insertOne({
                     contestId: contestId,
+                    participantName: session.metadata.participantName,
                     userEmail: session.customer_email,
                     joinedAt: new Date(),
                     sessionId: session.id,
