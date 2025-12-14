@@ -160,14 +160,16 @@ async function run() {
         //update a contest api(admin)
         app.patch("/contests/:id", async (req, res) => {
             const id = req.params.id;
-            const { approvalStatus , winner } = req.body;
+            const { approvalStatus , winnerInfo } = req.body;
             const query = { _id: new ObjectId(id) };
 
             const updatedFields = {};
 
             if (approvalStatus !== undefined) updatedFields.approvalStatus = approvalStatus;
-            if (winner) {
-                updatedFields.winner = winner;
+            if (winnerInfo) {
+                updatedFields.winnerName = winnerInfo.winnerName;
+                updatedFields.winnerPhoto = winnerInfo.winnerPhoto;
+                updatedFields.winnerEmail = winnerInfo.winnerEmail;
             }
 
             const updatedDoc = {
