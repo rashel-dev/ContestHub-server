@@ -255,6 +255,20 @@ async function run() {
             res.send(entry || {});
         });
 
+        // Get all registered users for a contest
+        app.get("/contest-registrations/:contestId", async (req, res) => {
+            const { contestId } = req.params;
+
+            const submissions = await contestEntryCollection
+                .find({
+                    contestId: contestId,
+                })
+                .sort({ submittedAt: -1 })
+                .toArray();
+
+            res.send(submissions);
+        });
+
         // -----------------payment related api---------------------------
 
         //create payment api
