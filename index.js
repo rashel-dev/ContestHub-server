@@ -149,7 +149,7 @@ async function run() {
             res.send(result);
         });
 
-        //update a contest api
+        //update a contest api(admin)
         app.patch("/contests/:id", async (req, res) => {
             const id = req.params.id;
             const { approvalStatus } = req.body;
@@ -160,6 +160,26 @@ async function run() {
                 },
             };
             const result = await contestCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        });
+
+        // update contest info (creator)
+        app.patch("/contests/edit/:id", async (req, res) => {
+            const id = req.params.id;
+            const data = req.body;
+
+            delete data.approvalStatus;
+
+            const result = await contestCollection.updateOne(
+                { _id: new ObjectId(id) },
+                {
+                    $set: {
+                        ...data,
+                        updatedAt: new Date(),
+                    },
+                }
+            );
+
             res.send(result);
         });
 
@@ -223,7 +243,6 @@ async function run() {
             res.send({ success: true, message: "Task submitted successfully" });
         });
 
-        
         // Get user's contest entry (for submission status)
         app.get("/contest-entry", async (req, res) => {
             const { contestId, email } = req.query;
