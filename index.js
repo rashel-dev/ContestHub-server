@@ -204,7 +204,7 @@ async function run() {
             const {contestId, email, task} = req.body;
 
             const filter = {
-                contestId: new ObjectId(contestId),
+                contestId: contestId,
                 userEmail: email,
             };
 
@@ -216,7 +216,12 @@ async function run() {
             };
 
             const result = await contestEntryCollection.updateOne(filter, updateDoc);
-            res.send(result);
+            
+            if (result.matchedCount === 0) {
+                return res.status(404).send({ success: false, message: "No contest entry found for this user" });
+            }
+
+            res.send({ success: true, message: "Task submitted successfully" });
         })
 
         // -----------------payment related api---------------------------
