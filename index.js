@@ -204,6 +204,20 @@ async function run() {
 
         app.post("/create-checkout-session", async (req, res) => {
             const paymentInfo = req.body;
+
+            // Check if already paid
+            const alreadyPaid = await paymentCollection.findOne({
+                userEmail: paymentInfo.userEmail,
+                contestId: paymentInfo.contestId,
+                status: "paid",
+            });
+
+            if (alreadyPaid) {
+                return res.status(400).send({
+                    message: "You have already registered for this contest",
+                });
+            }
+
             const session = await stripe.checkout.sessions.create({
                 line_items: [
                     {
@@ -273,49 +287,13 @@ async function run() {
                     status: "confirmed",
                 });
 
-                res.send({ success: true, message: "Payment processed and participants count updated" });
+                res.send({ success: true, message: "Payment processed and participants count updated", transactionId: session.payment_intent });
             } catch (err) {
                 console.error(err);
                 res.status(500).send({ success: false, message: "Server error" });
             }
         });
 
-        // //payment success api => what to do after payment success
-        // app.patch("/payment-success", async (req, res) => {
-        //     const { session_id } = req.query;
-
-        //     const session = await stripe.checkout.sessions.retrieve(session_id);
-
-        //     if (session.payment_status === "paid") {
-        //         const contestId = session.metadata.contestId;
-        //         const query = { _id: new ObjectId(contestId) };
-        //         const updatedDoc = {
-        //             $inc: {
-        //                 participants: 1,
-        //             },
-        //         };
-        //         const result = await contestCollection.updateOne(query, updatedDoc);
-
-        //         // Save payment info
-        //         const paymentInfo ={
-        //             sessionId: session.id,
-        //             userEmail: session.customer_email,
-        //             contestId: session.metadata.contestId,
-        //             contestName: session.metadata.contestName,
-        //             amount: session.amount_total / 100,
-        //             currency: session.currency,
-        //             status: session.payment_status,
-        //             createdAt: new Date(),
-        //             transactionId: session.payment_intent,
-        //         };
-
-        //         if(session.payment_status === "paid"){
-        //             await paymentCollection.insertOne(paymentInfo);
-        //         }
-
-        //         res.send({ success: true, message: "Payment processed and participants count updated", result });
-        //     }
-        // });
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
