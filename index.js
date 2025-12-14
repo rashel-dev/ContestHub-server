@@ -198,10 +198,9 @@ async function run() {
             });
         });
 
-
-        //submit task api 
+        //submit task api
         app.patch("/submit-task", async (req, res) => {
-            const {contestId, email, task} = req.body;
+            const { contestId, email, task } = req.body;
 
             const filter = {
                 contestId: contestId,
@@ -210,19 +209,32 @@ async function run() {
 
             const updateDoc = {
                 $set: {
-                    submittedTask:task,
+                    submittedTask: task,
                     submittedAt: new Date(),
                 },
             };
 
             const result = await contestEntryCollection.updateOne(filter, updateDoc);
-            
+
             if (result.matchedCount === 0) {
                 return res.status(404).send({ success: false, message: "No contest entry found for this user" });
             }
 
             res.send({ success: true, message: "Task submitted successfully" });
-        })
+        });
+
+        
+        // Get user's contest entry (for submission status)
+        app.get("/contest-entry", async (req, res) => {
+            const { contestId, email } = req.query;
+
+            const entry = await contestEntryCollection.findOne({
+                contestId,
+                userEmail: email,
+            });
+
+            res.send(entry || {});
+        });
 
         // -----------------payment related api---------------------------
 
@@ -319,7 +331,6 @@ async function run() {
                 res.status(500).send({ success: false, message: "Server error" });
             }
         });
-
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
