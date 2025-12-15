@@ -355,6 +355,27 @@ async function run() {
                 res.status(500).send({ message: "Failed to load leaderboard" });
             }
         });
+
+
+        // get user contest stats
+            app.get("/users/stats/:email", async (req, res) => {
+                const { email } = req.params;
+
+                const participated = await contestEntryCollection.countDocuments({
+                    userEmail: email,
+                    status: "confirmed",
+                });
+
+                const wins = await contestCollection.countDocuments({
+                    winnerEmail: email,
+                });
+
+                res.send({
+                    participated,
+                    wins,
+                });
+            });
+
         
 
         // -----------------payment related api---------------------------
