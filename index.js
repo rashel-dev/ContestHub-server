@@ -106,7 +106,7 @@ async function run() {
         //get all contests api
         app.get("/contests", async (req, res) => {
             const query = {};
-            const { email } = req.query;
+            const { email, winnerEmail } = req.query;
             if (email) {
                 query.creatorEmail = email;
             }
@@ -119,6 +119,19 @@ async function run() {
             const cursor = contestCollection.find(query, options);
             const result = await cursor.toArray();
             res.send(result);
+        });
+
+        // Get all winning contests by user email
+        app.get("/my-winning-contests", async (req, res) => {
+            try {
+                const { email } = req.query;
+
+                const result = await contestCollection.find({ "winnerEmail": email }).sort({ createdAt: -1 }).toArray();
+
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+            }
         });
 
         //get 8 popular contest api
@@ -160,7 +173,7 @@ async function run() {
         //update a contest api(admin)
         app.patch("/contests/:id", async (req, res) => {
             const id = req.params.id;
-            const { approvalStatus , winnerInfo } = req.body;
+            const { approvalStatus, winnerInfo } = req.body;
             const query = { _id: new ObjectId(id) };
 
             const updatedFields = {};
