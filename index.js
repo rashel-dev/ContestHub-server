@@ -376,7 +376,29 @@ async function run() {
                 });
             });
 
-        
+            app.get("/latest-winners", async (req, res) => {
+                try {
+                    const latestWinners = await contestCollection
+                        .find({ winnerEmail: { $exists: true, $ne: null } })
+                        .sort({ deadline: -1 }) // latest ended contests first
+                        .limit(6)
+                        .project({
+                            _id: 0,
+                            winnerName: 1,
+                            winnerEmail: 1,
+                            winnerPhoto: 1,
+                            contestName: 1,
+                            prizeAmount: 1, 
+                        })
+                        .toArray();
+
+                    res.send(latestWinners);
+                } catch (err) {
+                    console.error(err);
+                    res.status(500).send({ message: "Failed to fetch latest winners" });
+                }
+            });
+            
 
         // -----------------payment related api---------------------------
 
