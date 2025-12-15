@@ -126,7 +126,7 @@ async function run() {
             try {
                 const { email } = req.query;
 
-                const result = await contestCollection.find({ "winnerEmail": email }).sort({ createdAt: -1 }).toArray();
+                const result = await contestCollection.find({ winnerEmail: email }).sort({ createdAt: -1 }).toArray();
 
                 res.send(result);
             } catch (error) {
@@ -298,6 +298,64 @@ async function run() {
 
             res.send(submissions);
         });
+
+        app.get("/leaderboard", async (req, res) => {
+            try {
+                const leaderboard = await userCollection
+                    .aggregate([
+                        // 1 Lookup winning contests
+                        {
+                            $lookup: {
+                                from: "contests",
+                                localField: "email",
+                                foreignField: "winnerEmail",
+                                as: "wonContests",
+                            },
+                        },
+
+                        // 2 Lookup participated contests
+                        {
+                            $lookup: {
+                                from: "contestEntries",
+                                localField: "email",
+                                foreignField: "userEmail",
+                                as: "participatedContests",
+                            },
+                        },
+
+                        // 3 Count wins & participation
+                        {
+                            $addFields: {
+                                winCount: { $size: "$wonContests" },
+                                participatedCount: { $size: "$participatedContests" },
+                            },
+                        },
+
+                        // 4 Sort leaderboard
+                        {
+                            $sort: {
+                                winCount: -1,
+                                participatedCount: -1,
+                            },
+                        },
+
+                        // 5 Clean response
+                        {
+                            $project: {
+                                wonContests: 0,
+                                participatedContests: 0,
+                            },
+                        },
+                    ])
+                    .toArray();
+
+                res.send(leaderboard);
+            } catch (error) {
+                console.error("Leaderboard Error:", error);
+                res.status(500).send({ message: "Failed to load leaderboard" });
+            }
+        });
+        
 
         // -----------------payment related api---------------------------
 
