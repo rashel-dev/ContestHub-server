@@ -65,6 +65,18 @@ async function run() {
         const paymentCollection = database.collection("payments");
         const contestEntryCollection = database.collection("contestEntries");
 
+
+        //middleware for verifing admin
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded_email;
+            const query = {email};
+            const user = await userCollection.findOne(query);
+            if (!user ||user?.role !== "admin") {
+                return res.status(403).send({ message: "Forbidden access" });
+            }
+            next();
+        }
+
         // -------------------- User related api---------------------------
 
         //get all users api
@@ -74,7 +86,7 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/users/:email/role', async (req, res) => {
+        app.get('/users/:email/role',verifyFBToken, async (req, res) => {
             const email = req.params.email;
             const query = {email};
             const user = await userCollection.findOne(query);
@@ -92,10 +104,10 @@ async function run() {
         //create a user api
         app.post("/users", async (req, res) => {
             const user = req.body;
-            user.role = "user"; // default role
+            user.role = "user";
             user.createdAt = new Date();
 
-            //check if user already exists. if exists, do not insert again
+            //check if user already exists
             const email = user.email;
             const userExists = await userCollection.findOne({ email });
             if (userExists) {
