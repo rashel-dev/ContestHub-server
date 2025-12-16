@@ -2,9 +2,16 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 3000;
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const admin = require("firebase-admin");
+
+const serviceAccount = require("./contest-hub-firebase-adminsdk.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 // MongoDB
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -12,6 +19,25 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+const verifyFBToken = async (req, res, next) => {
+    const token = req.headers.authorization;
+    if (!token) {
+        return res.status(401).send({ message: "Unauthorized access" });
+    }
+
+    try{
+        const idToken = token.split(" ")[1];
+        const decoded = await admin.auth().verifyIdToken(idToken);
+        console.log("decoded", decoded)
+        req.decoded_email = decoded.email;
+    }
+    catch(err){
+        return res.status(401).send({ message: "Unauthorized access" });
+    }
+
+    next();
+};
 
 // MongoDB Connection
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.0ocgkty.mongodb.net/?appName=Cluster0`;
@@ -224,11 +250,19 @@ async function run() {
         //================================contest entry collection related api=========================================
 
         // My participated contests
-        app.get("/my-participated-contests", async (req, res) => {
+        app.get("/my-participated-contests", verifyFBToken, async (req, res) => {
             const { email } = req.query;
+
+            if(email){
+                if(email !== req.decoded_email){
+                    return res.status(403).send({ message: "Forbidden access" });
+                }
+            }
+
 
             // Get all paid contests by user
             const payments = await paymentCollection.find({ userEmail: email, status: "paid" }).sort({ createdAt: -1 }).toArray();
+
 
             res.send(payments);
         });
@@ -356,49 +390,47 @@ async function run() {
             }
         });
 
-
         // get user contest stats
-            app.get("/users/stats/:email", async (req, res) => {
-                const { email } = req.params;
+        app.get("/users/stats/:email", async (req, res) => {
+            const { email } = req.params;
 
-                const participated = await contestEntryCollection.countDocuments({
-                    userEmail: email,
-                    status: "confirmed",
-                });
-
-                const wins = await contestCollection.countDocuments({
-                    winnerEmail: email,
-                });
-
-                res.send({
-                    participated,
-                    wins,
-                });
+            const participated = await contestEntryCollection.countDocuments({
+                userEmail: email,
+                status: "confirmed",
             });
 
-            app.get("/latest-winners", async (req, res) => {
-                try {
-                    const latestWinners = await contestCollection
-                        .find({ winnerEmail: { $exists: true, $ne: null } })
-                        .sort({ deadline: -1 }) // latest ended contests first
-                        .limit(6)
-                        .project({
-                            _id: 0,
-                            winnerName: 1,
-                            winnerEmail: 1,
-                            winnerPhoto: 1,
-                            contestName: 1,
-                            prizeAmount: 1, 
-                        })
-                        .toArray();
-
-                    res.send(latestWinners);
-                } catch (err) {
-                    console.error(err);
-                    res.status(500).send({ message: "Failed to fetch latest winners" });
-                }
+            const wins = await contestCollection.countDocuments({
+                winnerEmail: email,
             });
-            
+
+            res.send({
+                participated,
+                wins,
+            });
+        });
+
+        app.get("/latest-winners", async (req, res) => {
+            try {
+                const latestWinners = await contestCollection
+                    .find({ winnerEmail: { $exists: true, $ne: null } })
+                    .sort({ deadline: -1 }) // latest ended contests first
+                    .limit(6)
+                    .project({
+                        _id: 0,
+                        winnerName: 1,
+                        winnerEmail: 1,
+                        winnerPhoto: 1,
+                        contestName: 1,
+                        prizeAmount: 1,
+                    })
+                    .toArray();
+
+                res.send(latestWinners);
+            } catch (err) {
+                console.error(err);
+                res.status(500).send({ message: "Failed to fetch latest winners" });
+            }
+        });
 
         // -----------------payment related api---------------------------
 
