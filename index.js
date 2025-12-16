@@ -10,7 +10,7 @@ const admin = require("firebase-admin");
 const serviceAccount = require("./contest-hub-firebase-adminsdk.json");
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert(serviceAccount),
 });
 
 // MongoDB
@@ -26,13 +26,12 @@ const verifyFBToken = async (req, res, next) => {
         return res.status(401).send({ message: "Unauthorized access" });
     }
 
-    try{
+    try {
         const idToken = token.split(" ")[1];
         const decoded = await admin.auth().verifyIdToken(idToken);
-        console.log("decoded", decoded)
+        console.log("decoded", decoded);
         req.decoded_email = decoded.email;
-    }
-    catch(err){
+    } catch (err) {
         return res.status(401).send({ message: "Unauthorized access" });
     }
 
@@ -65,36 +64,35 @@ async function run() {
         const paymentCollection = database.collection("payments");
         const contestEntryCollection = database.collection("contestEntries");
 
-
         //middleware for verifing admin
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded_email;
-            const query = {email};
+            const query = { email };
             const user = await userCollection.findOne(query);
-            if (!user ||user?.role !== "admin") {
+            if (!user || user?.role !== "admin") {
                 return res.status(403).send({ message: "Forbidden access" });
             }
             next();
-        }
+        };
 
         // -------------------- User related api---------------------------
 
         //get all users api
-        app.get("/users", async (req, res) => {
+        app.get("/users", verifyFBToken, async (req, res) => {
             const cursor = userCollection.find().sort({ createdAt: -1 });
             const result = await cursor.toArray();
             res.send(result);
         });
 
-        app.get('/users/:email/role',verifyFBToken, async (req, res) => {
+        app.get("/users/:email/role", verifyFBToken, async (req, res) => {
             const email = req.params.email;
-            const query = {email};
+            const query = { email };
             const user = await userCollection.findOne(query);
-            res.send({role: user?.role || 'user'});
+            res.send({ role: user?.role || "user" });
         });
 
         //get a user by his email
-        app.get("/users/:email", async (req, res) => {
+        app.get("/users/:email", verifyFBToken, async (req, res) => {
             const email = req.params.email;
             const query = { email: email };
             const result = await userCollection.findOne(query);
@@ -119,7 +117,7 @@ async function run() {
         });
 
         //update user data api by email
-        app.patch("/users", async (req, res) => {
+        app.patch("/users", verifyFBToken, async (req, res) => {
             const { email } = req.query;
             const updatedData = req.body;
             const filter = { email };
@@ -133,7 +131,7 @@ async function run() {
         });
 
         // Update user role
-        app.patch("/users/:id/role", async (req, res) => {
+        app.patch("/users/:id/role", verifyFBToken, async (req, res) => {
             const { id } = req.params;
             const { role } = req.body;
 
@@ -167,7 +165,7 @@ async function run() {
         });
 
         // Get all winning contests by user email
-        app.get("/my-winning-contests", async (req, res) => {
+        app.get("/my-winning-contests", verifyFBToken, async (req, res) => {
             try {
                 const { email } = req.query;
 
@@ -202,7 +200,7 @@ async function run() {
         });
 
         //create a contest api
-        app.post("/contests", async (req, res) => {
+        app.post("/contests", verifyFBToken, async (req, res) => {
             const contest = req.body;
             contest.createdAt = new Date();
 
@@ -216,7 +214,7 @@ async function run() {
         });
 
         //update a contest api(admin)
-        app.patch("/contests/:id", async (req, res) => {
+        app.patch("/contests/:id", verifyFBToken, async (req, res) => {
             const id = req.params.id;
             const { approvalStatus, winnerInfo } = req.body;
             const query = { _id: new ObjectId(id) };
@@ -239,7 +237,7 @@ async function run() {
         });
 
         // update contest info (creator)
-        app.patch("/contests/edit/:id", async (req, res) => {
+        app.patch("/contests/edit/:id", verifyFBToken, async (req, res) => {
             const id = req.params.id;
             const data = req.body;
 
@@ -259,7 +257,7 @@ async function run() {
         });
 
         // Delete a contest api
-        app.delete("/contests/:id", async (req, res) => {
+        app.delete("/contests/:id", verifyFBToken, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await contestCollection.deleteOne(query);
@@ -272,22 +270,20 @@ async function run() {
         app.get("/my-participated-contests", verifyFBToken, async (req, res) => {
             const { email } = req.query;
 
-            if(email){
-                if(email !== req.decoded_email){
+            if (email) {
+                if (email !== req.decoded_email) {
                     return res.status(403).send({ message: "Forbidden access" });
                 }
             }
 
-
             // Get all paid contests by user
             const payments = await paymentCollection.find({ userEmail: email, status: "paid" }).sort({ createdAt: -1 }).toArray();
-
 
             res.send(payments);
         });
 
         // Check if a user already registered in a contest
-        app.get("/contest-registered", async (req, res) => {
+        app.get("/contest-registered", verifyFBToken, async (req, res) => {
             const { contestId, email } = req.query;
 
             const payment = await paymentCollection.findOne({
@@ -302,7 +298,7 @@ async function run() {
         });
 
         //submit task api
-        app.patch("/submit-task", async (req, res) => {
+        app.patch("/submit-task", verifyFBToken, async (req, res) => {
             const { contestId, email, task } = req.body;
 
             const filter = {
@@ -327,7 +323,7 @@ async function run() {
         });
 
         // Get user's contest entry (for submission status)
-        app.get("/contest-entry", async (req, res) => {
+        app.get("/contest-entry", verifyFBToken, async (req, res) => {
             const { contestId, email } = req.query;
 
             const entry = await contestEntryCollection.findOne({
@@ -339,7 +335,7 @@ async function run() {
         });
 
         // Get all registered users for a contest
-        app.get("/contest-registrations/:contestId", async (req, res) => {
+        app.get("/contest-registrations/:contestId", verifyFBToken, async (req, res) => {
             const { contestId } = req.params;
 
             const submissions = await contestEntryCollection
@@ -410,7 +406,7 @@ async function run() {
         });
 
         // get user contest stats
-        app.get("/users/stats/:email", async (req, res) => {
+        app.get("/users/stats/:email", verifyFBToken, async (req, res) => {
             const { email } = req.params;
 
             const participated = await contestEntryCollection.countDocuments({
@@ -455,7 +451,7 @@ async function run() {
 
         //create payment api
 
-        app.post("/create-checkout-session", async (req, res) => {
+        app.post("/create-checkout-session", verifyFBToken, async (req, res) => {
             const paymentInfo = req.body;
 
             // Check if already paid
@@ -497,7 +493,7 @@ async function run() {
             res.send({ url: session.url });
         });
 
-        app.patch("/payment-success", async (req, res) => {
+        app.patch("/payment-success", verifyFBToken, async (req, res) => {
             const { session_id } = req.query;
 
             try {
