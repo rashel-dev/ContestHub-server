@@ -139,20 +139,28 @@ async function run() {
         //get all contests api
         app.get("/contests", async (req, res) => {
             const query = {};
-            const { email, status } = req.query;
+            const { email, status, sort, limit, upcoming } = req.query;
             if (email) {
                 query.creatorEmail = email;
             }
             if (status) {
                 query.approvalStatus = status;
             }
+            if (upcoming === "true") {
+                query.deadline = { $gt: new Date() };
+            }
 
-            const options = {
-                // sort by createdAt in descending order
-                sort: { createdAt: -1 },
-            };
+            let sortOption = { createdAt: -1 };
+            if (sort === "popular") {
+                sortOption = { participants: -1, createdAt: -1 };
+            }
 
-            const cursor = contestCollection.find(query, options);
+            let cursor = contestCollection.find(query).sort(sortOption);
+
+            if (limit) {
+                cursor = cursor.limit(parseInt(limit));
+            }
+
             const result = await cursor.toArray();
             res.send(result);
         });
@@ -168,20 +176,6 @@ async function run() {
             } catch (error) {
                 console.error(error);
             }
-        });
-
-        //get 8 popular contest api
-        app.get("/contests/popular", async (req, res) => {
-            const now = new Date();
-            const result = await contestCollection
-                .find({ deadline: { $gt: now }, approvalStatus: "approved" })
-                .sort({
-                    participants: -1,
-                    createdAt: -1,
-                })
-                .limit(8)
-                .toArray();
-            res.send(result);
         });
 
         //get a single contest api
