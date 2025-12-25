@@ -3,3 +3,4 @@ node_modules
 contest-hub-firebase-adminsdk.json
 .vercel
 .env*.local
+whatShouldUpdate.md
